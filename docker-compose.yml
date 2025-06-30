@@ -1,0 +1,23 @@
+# Versão da sintaxe do Docker Compose
+version: '3.8'
+
+# Definição dos nossos serviços (contêineres)
+services:
+  # Nosso serviço da API
+  backend:
+    # Instrução para construir a imagem usando o Dockerfile da pasta ./backend
+    build: ./backend
+    # Nome do contêiner para fácil identificação
+    container_name: desafio_backend
+    # Mapeamento de portas: Porta 3000 do seu PC -> Porta 3000 do contêiner
+    ports:
+      - "3000:3000"
+    # Volumes para sincronização de arquivos (a mágica do hot-reload!)
+    volumes:
+      # Mapeia a pasta ./backend local para /usr/src/app no contêiner
+      - ./backend:/usr/src/app
+      # Volume anônimo para evitar que o node_modules local sobrescreva o do contêiner
+      - /usr/src/app/node_modules
+    # Comando que será executado ao iniciar o contêiner.
+    # Ele primeiro garante que as dependências estão instaladas e depois inicia o servidor.
+    command: sh -c "npm install && npm run start:dev"
