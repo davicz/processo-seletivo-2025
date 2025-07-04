@@ -1,23 +1,47 @@
-# Versão da sintaxe do Docker Compose
-version: '3.8'
-
-# Definição dos nossos serviços (contêineres)
+# Início do Bloco 1: Serviço do Banco de Dados
 services:
-  # Nosso serviço da API
-  backend:
-    # Instrução para construir a imagem usando o Dockerfile da pasta ./backend
-    build: ./backend
-    # Nome do contêiner para fácil identificação
-    container_name: desafio_backend
-    # Mapeamento de portas: Porta 3000 do seu PC -> Porta 3000 do contêiner
+  postgres:
+    image: postgres:15-alpine # Imagem oficial e leve do Postgres, versão 15
+    container_name: desafio_postgres # Nome fixo para o nosso contêiner de banco de dados
+    restart: always # Garante que o banco sempre reinicie se houver alguma falha
+    environment:
+      # Credenciais para o banco de dados. O Postgres usará isso para se autoconfigurar.
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: desafio_db
     ports:
-      - "3000:3000"
-    # Volumes para sincronização de arquivos (a mágica do hot-reload!)
+      # Mapeia a porta do contêiner para a sua máquina: PC:Contêiner
+      # Permite que você acesse o banco de fora com ferramentas como DBeaver ou pgAdmin.
+      - "5432:5432"
     volumes:
-      # Mapeia a pasta ./backend local para /usr/src/app no contêiner
+      # Cria um "volume nomeado" para persistir os dados do banco.
+      # Isso garante que seus dados não sejam perdidos ao desligar o contêiner.
+      - postgres_data:/var/lib/postgresql/data
+
+      # Início do Bloco 2: Serviço da API
+  backend:
+    build: ./backend # Instrui o Docker a construir a imagem a partir do Dockerfile na pasta ./backend
+    container_name: desafio_backend # Nome fixo para o contêiner da API
+    ports:
+      # Mapeia a porta da aplicação para a sua máquina
+      - "3000:3000"
+    volumes:
+      # Espelha o código do seu PC para o contêiner, permitindo o hot-reload
       - ./backend:/usr/src/app
-      # Volume anônimo para evitar que o node_modules local sobrescreva o do contêiner
+      # Evita que a node_modules do seu PC (se existir) sobrescreva a do contêiner
       - /usr/src/app/node_modules
-    # Comando que será executado ao iniciar o contêiner.
-    # Ele primeiro garante que as dependências estão instaladas e depois inicia o servidor.
-    command: sh -c "npm install && npm run start:dev"
+    environment:
+      # Passa as credenciais do banco para a aplicação NestJS como variáveis de ambiente
+      DB_HOST: postgres # IMPORTANTE: O host é o nome do serviço do banco definido acima
+      DB_PORT: 5432
+      DB_USERNAME: user
+      DB_PASSWORD: password
+      DB_DATABASE: desafio_db
+    depends_on:
+      # Garante que o contêiner do 'postgres' será iniciado ANTES do 'backend'
+      - postgres
+    command: sh -c "npm install && npm run start:dev" # Comando para rodar a aplicação
+
+    # Início do Bloco 3: Definição do Volume
+volumes:
+  postgres_data:
